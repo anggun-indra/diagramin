@@ -638,7 +638,8 @@ Editor.themes.push('atlas');
 
 							if (this.shareElt != null)
 							{
-								this.shareElt.style.display = (iw > 360 + eo) ? '' : 'none';
+								var isLoggedIn = (typeof window.DiagraminAuth !== 'undefined' && window.DiagraminAuth.currentUser != null);
+								this.shareElt.style.display = (isLoggedIn && iw > 360 + eo) ? '' : 'none';
 							}
 
 							if (this.overflowMenuElt != null)

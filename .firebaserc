@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "kuliah-23"
+  },
+  "targets": {
+    "kuliah-23": {
+      "hosting": {
+        "diagramin": [
+          "diagramin"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

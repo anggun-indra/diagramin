@@ -7480,9 +7480,11 @@ App.prototype.updateButtonContainer = function(skipNotifications)
 				this.buttonContainer.appendChild(this.shareButton);
 			}
 
+			var isLoggedIn = (typeof window.DiagraminAuth !== 'undefined' && window.DiagraminAuth.currentUser != null);
 			this.shareButton.style.display = (file != null &&
+				isLoggedIn &&
 				Editor.currentTheme == 'kennedy' &&
-				urlParams['embed'] != '1') ? '' : 'none';
+				urlParams['embed'] != '1') ? 'inline-flex' : 'none';
 			
 			// User
 			if (Editor.currentTheme != 'simple')
