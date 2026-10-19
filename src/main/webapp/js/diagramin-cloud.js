@@ -11,7 +11,119 @@
 	var EDIT_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
 	var MOVE_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>';
 
+	function getDiagraminCloudFileClass()
+	{
+		if (window.DiagraminCloudFile) return window.DiagraminCloudFile;
+
+		function DiagraminCloudFile(ui, data, title, diagramMeta)
+		{
+			if (typeof DrawioFile !== 'undefined')
+			{
+				DrawioFile.call(this, ui, data);
+			}
+			this.ui = ui;
+			this.title = title || (diagramMeta ? diagramMeta.title : null) || (ui && ui.defaultFilename) || 'Untitled Diagram';
+			this.diagramMeta = diagramMeta || null;
+			this.mode = 'diagramin_cloud';
+		}
+
+		if (typeof DrawioFile !== 'undefined')
+		{
+			mxUtils.extend(DiagraminCloudFile, DrawioFile);
+		}
+
+		DiagraminCloudFile.prototype.allChangesSavedKey = 'allChangesSaved';
+		DiagraminCloudFile.prototype.savingStatusKey = 'saving';
+
+		DiagraminCloudFile.prototype.getMode = function()
+		{
+			return this.mode;
+		};
+
+		DiagraminCloudFile.prototype.getTitle = function()
+		{
+			return this.title;
+		};
+
+		DiagraminCloudFile.prototype.isRenamable = function()
+		{
+			return true;
+		};
+
+		DiagraminCloudFile.prototype.isEditable = function()
+		{
+			return true;
+		};
+
+		DiagraminCloudFile.prototype.getHash = function()
+		{
+			return 'C' + (this.diagramMeta && this.diagramMeta.id ? this.diagramMeta.id : '');
+		};
+
+		DiagraminCloudFile.prototype.save = function(revision, success, error)
+		{
+			this.saveFile(this.title, revision, success, error);
+		};
+
+		DiagraminCloudFile.prototype.saveAs = function(title, success, error)
+		{
+			this.saveFile(title, false, success, error);
+		};
+
+		DiagraminCloudFile.prototype.saveFile = function(title, revision, success, error)
+		{
+			var self = this;
+			var diagId = this.diagramMeta ? this.diagramMeta.id : null;
+			var folderId = this.diagramMeta ? this.diagramMeta.folder_id : null;
+			DiagraminCloud.saveDiagram({
+				id: diagId,
+				title: title || self.title,
+				folder_id: folderId
+			}).then(function(res)
+			{
+				self.setModified(false);
+				if (success) success();
+			}).catch(function(err)
+			{
+				if (error) error(err);
+			});
+		};
+
+		DiagraminCloudFile.prototype.rename = function(newTitle, success, error)
+		{
+			var self = this;
+			this.title = newTitle;
+			if (this.diagramMeta) this.diagramMeta.title = newTitle;
+			if (this.descriptorChanged) this.descriptorChanged();
+
+			if (this.diagramMeta && this.diagramMeta.id)
+			{
+				DiagraminCloud.saveDiagram({
+					id: this.diagramMeta.id,
+					title: newTitle,
+					folder_id: this.diagramMeta.folder_id
+				}).then(function(res)
+				{
+					self.setModified(false);
+					if (success) success();
+				}).catch(function(err)
+				{
+					if (error) error(err);
+				});
+			}
+			else if (success)
+			{
+				success();
+			}
+		};
+
+		window.DiagraminCloudFile = DiagraminCloudFile;
+		return DiagraminCloudFile;
+	}
+	window.getDiagraminCloudFileClass = getDiagraminCloudFileClass;
+
 	window.DiagraminCloud = {
+		getFileClass: getDiagraminCloudFileClass,
 		currentDiagram: null, // { id, title, folder_id, blob_url }
 		folders: [],
 		diagrams: [],
@@ -586,9 +698,11 @@
 				return;
 			}
 
-			var title = (params && params.title) || (editorUi.getBaseFilename && editorUi.getBaseFilename()) || 'Untitled Diagram';
-			var folderId = (params && params.folder_id) || null;
-			var diagramId = (params && params.id) || null;
+			var title = (params && params.title) || (this.currentDiagram && this.currentDiagram.title) ||
+				(editorUi.getCurrentFile && editorUi.getCurrentFile() && editorUi.getCurrentFile().getTitle()) ||
+				(editorUi.getBaseFilename && editorUi.getBaseFilename()) || 'Untitled Diagram';
+			var folderId = (params && params.folder_id !== undefined) ? params.folder_id : (this.currentDiagram ? this.currentDiagram.folder_id : null);
+			var diagramId = (params && params.id) || (this.currentDiagram ? this.currentDiagram.id : null);
 
 			var saveBtnLabel = document.getElementById('diagraminSaveBtnLabel');
 			if (saveBtnLabel) saveBtnLabel.textContent = 'Menyimpan...';
@@ -603,22 +717,83 @@
 				});
 
 				this.currentDiagram = res.diagram;
-				if (editorUi.setFilename)
+
+				var CloudFileClass = getDiagraminCloudFileClass();
+				var curFile = (editorUi.getCurrentFile ? editorUi.getCurrentFile() : null);
+
+				if (!curFile || !(curFile instanceof CloudFileClass))
 				{
-					editorUi.setFilename(res.diagram.title);
+					var newFile = new CloudFileClass(editorUi, xml, res.diagram.title, res.diagram);
+					newFile.setModified(false);
+					if (editorUi.setCurrentFile)
+					{
+						editorUi.setCurrentFile(newFile);
+					}
+					if (newFile.installListeners)
+					{
+						newFile.installListeners();
+					}
+					curFile = newFile;
 				}
+				else
+				{
+					curFile.title = res.diagram.title;
+					curFile.diagramMeta = res.diagram;
+					curFile.setModified(false);
+				}
+
+				if (curFile)
+				{
+					curFile.setModified(false);
+					if (curFile.removeDraft)
+					{
+						curFile.removeDraft();
+					}
+					if (curFile.clearStatus)
+					{
+						curFile.clearStatus();
+					}
+				}
+
+				// Update top navigation filename & document title
+				if (editorUi.fname)
+				{
+					editorUi.fname.innerText = res.diagram.title;
+				}
+				if (editorUi.descriptorChanged)
+				{
+					editorUi.descriptorChanged();
+				}
+				if (editorUi.updateDocumentTitle)
+				{
+					editorUi.updateDocumentTitle();
+				}
+				if (editorUi.clearStatus)
+				{
+					editorUi.clearStatus();
+				}
+
+				// Update editor status badge to green saved status
 				if (editorUi.editor)
 				{
 					editorUi.editor.setModified(false);
+					if (editorUi.editor.setStatus)
+					{
+						editorUi.editor.setStatus('<div title="Tersimpan di Cloud" style="color:#16a34a;font-weight:600;display:inline-flex;align-items:center;gap:4px;">' +
+							'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
+							'<span>Tersimpan di Vercel Cloud</span></div>');
+					}
 				}
 
 				this.showToast('Diagram "' + res.diagram.title + '" berhasil disimpan di Vercel Cloud!', 'success');
 				this.refreshList();
+				return res;
 			}
 			catch (err)
 			{
 				console.error('Save to cloud failed:', err);
 				this.showToast('Gagal menyimpan: ' + err.message, 'error');
+				throw err;
 			}
 			finally
 			{
@@ -642,31 +817,79 @@
 				}
 				var xml = await response.text();
 
-				var doc = mxUtils.parseXml(xml);
-				if (doc && doc.documentElement)
-				{
-					editorUi.editor.setGraphXml(doc.documentElement);
-					if (editorUi.setFilename)
-					{
-						editorUi.setFilename(diag.title);
-					}
-					if (editorUi.editor)
-					{
-						editorUi.editor.setModified(false);
-						if (editorUi.editor.undoManager)
-						{
-							editorUi.editor.undoManager.clear();
-						}
-					}
+				var CloudFileClass = getDiagraminCloudFileClass();
+				var file = new CloudFileClass(editorUi, xml, diag.title, diag);
 
-					this.currentDiagram = diag;
-					this.showToast('Diagram "' + diag.title + '" berhasil dibuka!', 'success');
-					this.closeModal();
+				if (typeof editorUi.fileLoaded === 'function')
+				{
+					editorUi.fileLoaded(file);
 				}
 				else
 				{
-					throw new Error('Format diagram tidak valid.');
+					var doc = mxUtils.parseXml(xml);
+					if (doc && doc.documentElement && editorUi.editor)
+					{
+						editorUi.editor.setGraphXml(doc.documentElement);
+					}
+					if (editorUi.setCurrentFile)
+					{
+						editorUi.setCurrentFile(file);
+					}
+					if (file.open)
+					{
+						file.open();
+					}
 				}
+
+				this.currentDiagram = diag;
+
+				// Guarantee title and clean saved status
+				if (editorUi.fname)
+				{
+					editorUi.fname.innerText = diag.title;
+				}
+				if (editorUi.descriptorChanged)
+				{
+					editorUi.descriptorChanged();
+				}
+				if (editorUi.updateDocumentTitle)
+				{
+					editorUi.updateDocumentTitle();
+				}
+
+				if (file.setModified)
+				{
+					file.setModified(false);
+				}
+				if (file.removeDraft)
+				{
+					file.removeDraft();
+				}
+				if (file.clearStatus)
+				{
+					file.clearStatus();
+				}
+				if (editorUi.clearStatus)
+				{
+					editorUi.clearStatus();
+				}
+				if (editorUi.editor)
+				{
+					editorUi.editor.setModified(false);
+					if (editorUi.editor.undoManager)
+					{
+						editorUi.editor.undoManager.clear();
+					}
+					if (editorUi.editor.setStatus)
+					{
+						editorUi.editor.setStatus('<div title="Tersimpan di Cloud" style="color:#16a34a;font-weight:600;display:inline-flex;align-items:center;gap:4px;">' +
+							'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
+							'<span>Tersimpan di Vercel Cloud</span></div>');
+					}
+				}
+
+				this.showToast('Diagram "' + diag.title + '" berhasil dibuka!', 'success');
+				this.closeModal();
 			}
 			catch (err)
 			{
@@ -898,7 +1121,7 @@
 				var t = titleInput.value.trim() || 'Untitled Diagram';
 				var f = folderSelect.value || null;
 				this.closeModal();
-				this.saveDiagram({ title: t, folder_id: f });
+				this.saveDiagram({ id: this.currentDiagram ? this.currentDiagram.id : null, title: t, folder_id: f });
 			});
 
 			setTimeout(function() { titleInput.focus(); titleInput.select(); }, 100);
