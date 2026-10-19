@@ -1,0 +1,10 @@
+{
+  "name": "diagramin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Diagramin - Online Diagram Software with Vercel Storage & Neon Postgres",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "@vercel/blob": "^0.27.1"
+  }
+}
