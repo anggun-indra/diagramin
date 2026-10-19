@@ -985,10 +985,13 @@ html div.mxWindow.mxWindowDocked {
 }
 
 .geMenubar .geButtonContainer {
+	float: right;
 	margin-top: -42px;
+	margin-right: 16px;
 }
 
 .geCompactMode .geMenubar .geButtonContainer {
+	float: right;
 	margin-top: 0px !important;
 	display: inline-flex !important;
 }
