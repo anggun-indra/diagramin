@@ -5,6 +5,6 @@
   "description": "Diagramin - Online Diagram Software with Vercel Storage & Neon Postgres",
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
-    "@vercel/blob": "^0.27.1"
+    "@vercel/blob": "^2.8.2"
   }
 }
