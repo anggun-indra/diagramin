@@ -13,12 +13,20 @@ window.DRAWIO_SERVER_URL = null; // No Java backend dependency
 window.DRAWIO_CONFIG = null;
 urlParams['sync'] = 'manual';
 
-// Only allow Local Device and Diagramin Cloud storage (disable 3rd party providers)
+// Only allow Local Device and Diagramin Cloud storage (disable Google Drive & 3rd party providers)
 urlParams['services'] = '0';
 urlParams['gapi'] = '0';
+urlParams['drive'] = '0';
 urlParams['db'] = '0';
 urlParams['od'] = '0';
 urlParams['gh'] = '0';
 urlParams['gl'] = '0';
 urlParams['tr'] = '0';
 urlParams['browser'] = '0';
+
+// Explicitly nullify 3rd party storage clients
+window.DriveClient = null;
+window.OneDriveClient = null;
+window.DropboxClient = null;
+window.TrelloClient = null;
+

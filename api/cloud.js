@@ -129,8 +129,8 @@ module.exports = async function handler(req, res) {
 
   const uid = user.uid;
   const sql = getDb();
-  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const action = url.searchParams.get('action') || (req.method === 'GET' ? 'list' : '');
+  const url = new URL(req.url || '/api/cloud', `http://${req.headers.host || 'localhost'}`);
+  const action = url.searchParams.get('action') || (req.body && req.body.action) || (req.method === 'GET' ? 'list' : '');
 
   try {
     // 1. LIST DIAGRAMS & FOLDERS

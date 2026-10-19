@@ -22,6 +22,12 @@
 		init: function(editorUi)
 		{
 			this.activeUi = editorUi;
+			this.nullifyExternalClients();
+			this.installCustomStorageDialog();
+			this.patchMenus(editorUi);
+			this.overrideShowSplash(editorUi);
+			this.overridePickFile();
+			this.overrideServiceCount();
 			this.mountHeaderButtons();
 			this.installKeyHandlers();
 
@@ -43,6 +49,364 @@
 					}
 				}));
 			}
+		},
+
+		// Explicitly disable Google Drive, OneDrive, Dropbox, and 3rd party providers
+		nullifyExternalClients: function()
+		{
+			window.DriveClient = null;
+			window.OneDriveClient = null;
+			window.DropboxClient = null;
+			window.TrelloClient = null;
+
+			if (window.App && window.App.prototype)
+			{
+				window.App.prototype.isModeEnabled = function(mode)
+				{
+					return mode === window.App.MODE_DEVICE;
+				};
+				window.App.prototype.isModeReady = function(mode)
+				{
+					return false;
+				};
+				window.App.prototype.getServiceForName = function(name)
+				{
+					return null;
+				};
+				window.App.prototype.isOwnGDriveDomain = function()
+				{
+					return false;
+				};
+				window.App.prototype.isDriveDomain = function()
+				{
+					return false;
+				};
+				window.App.prototype.showDriveAccessDialog = function()
+				{
+					return false;
+				};
+			}
+		},
+
+		// Overrides App.prototype.showSplash to offer Diagramin Cloud & Local Device
+		overrideShowSplash: function(editorUi)
+		{
+			if (!window.App || !window.App.prototype) return;
+
+			var self = this;
+			window.App.prototype.showSplash = function(force)
+			{
+				if (urlParams['noFileMenu'] == '1') return;
+
+				var showSecondDialog = mxUtils.bind(this, function()
+				{
+					if (this.isHomeEnabled && this.isHomeEnabled())
+					{
+						this.showHome();
+						return;
+					}
+
+					var dlg = (typeof SplashDialog === 'function') ? new SplashDialog(this) : null;
+					if (dlg && dlg.container)
+					{
+						this.showDialog(dlg.container, 340, 230, true, true, mxUtils.bind(this, function(cancel, isEsc)
+						{
+							if (cancel || isEsc)
+							{
+								var prev = Editor.useLocalStorage;
+								this.createFile(this.defaultFilename, null, null, null, null, null, null, urlParams['local'] != '1');
+								Editor.useLocalStorage = prev;
+							}
+						}), true);
+					}
+					else
+					{
+						this.createFile(this.defaultFilename, null, null, null, null, null, null, true);
+					}
+				});
+
+				if (this.mode == null || force)
+				{
+					var dlg = new window.StorageDialog(this, mxUtils.bind(this, function()
+					{
+						this.hideDialog();
+						showSecondDialog();
+					}));
+
+					this.showDialog(dlg.container, 460, 260, true, false);
+				}
+				else if (urlParams['create'] == null)
+				{
+					showSecondDialog();
+				}
+			};
+		},
+
+		// Overrides App.prototype.pickFile to redirect to Diagramin Cloud or local file picker
+		overridePickFile: function()
+		{
+			if (!window.App || !window.App.prototype) return;
+			var self = this;
+			var origPickFile = window.App.prototype.pickFile;
+
+			window.App.prototype.pickFile = function(mode)
+			{
+				mode = (mode != null) ? mode : this.mode;
+
+				if (mode === 'diagramin_cloud' || mode === App.MODE_GOOGLE)
+				{
+					if (self.showFileManagerDialog)
+					{
+						self.showFileManagerDialog();
+					}
+					return;
+				}
+
+				return origPickFile.apply(this, arguments);
+			};
+		},
+
+		// Override getServiceCount to report 2 services: Diagramin Cloud & Local Device
+		overrideServiceCount: function()
+		{
+			if (!window.EditorUi || !window.EditorUi.prototype) return;
+			window.EditorUi.prototype.getServiceCount = function()
+			{
+				return 2;
+			};
+		},
+
+		// Replaces window.StorageDialog so that only Diagramin Cloud & Local Device are offered
+		installCustomStorageDialog: function()
+		{
+			var self = this;
+			window.StorageDialog = function(editorUi, fn, rowLimit)
+			{
+				var div = document.createElement('div');
+				div.style.cssText = 'padding:16px 20px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#111827;';
+
+				var title = document.createElement('h2');
+				title.style.cssText = 'font-size:18px;font-weight:700;margin:0 0 6px 0;color:#111827;';
+				title.textContent = 'Pilih Tempat Penyimpanan Diagram';
+				div.appendChild(title);
+
+				var desc = document.createElement('p');
+				desc.style.cssText = 'font-size:13px;color:#6b7280;margin:0 0 20px 0;line-height:1.4;';
+				desc.textContent = 'Diagramin difokuskan pada 2 mode penyimpanan:';
+				div.appendChild(desc);
+
+				var cards = document.createElement('div');
+				cards.style.cssText = 'display:flex;gap:14px;justify-content:center;margin-bottom:16px;flex-direction:row;flex-wrap:nowrap;';
+
+				// 1. Cloud Storage Option
+				var cloudCard = document.createElement('div');
+				cloudCard.style.cssText = 'flex:1;min-width:140px;max-width:180px;padding:16px 14px;border:1.5px solid #2563eb;border-radius:10px;background:#eff6ff;cursor:pointer;text-align:center;transition:all 0.15s ease;box-shadow:0 2px 4px rgba(37,99,235,0.08);';
+				cloudCard.innerHTML = '<div style="width:44px;height:44px;margin:0 auto 10px auto;border-radius:50%;background:#2563eb;color:#ffffff;display:flex;align-items:center;justify-content:center;">' +
+					'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>' +
+					'</div>' +
+					'<div style="font-size:14px;font-weight:700;color:#1d4ed8;margin-bottom:4px;">Diagramin Cloud</div>' +
+					'<div style="font-size:11px;color:#3b82f6;line-height:1.3;">Vercel Blob &amp; Postgres</div>';
+				cloudCard.onmouseover = function() { this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 6px 12px rgba(37,99,235,0.15)'; };
+				cloudCard.onmouseout = function() { this.style.transform = 'none'; this.style.boxShadow = '0 2px 4px rgba(37,99,235,0.08)'; };
+				cloudCard.onclick = function()
+				{
+					editorUi.hideDialog();
+					if (window.DiagraminAuth && window.DiagraminAuth.currentUser != null)
+					{
+						if (fn) fn();
+					}
+					else
+					{
+						if (window.DiagraminAuth)
+						{
+							window.DiagraminAuth.showLoginModal();
+						}
+						if (fn) fn();
+					}
+				};
+				cards.appendChild(cloudCard);
+
+				// 2. Local Device Option
+				var deviceCard = document.createElement('div');
+				deviceCard.style.cssText = 'flex:1;min-width:140px;max-width:180px;padding:16px 14px;border:1.5px solid #e5e7eb;border-radius:10px;background:#ffffff;cursor:pointer;text-align:center;transition:all 0.15s ease;box-shadow:0 1px 3px rgba(0,0,0,0.05);';
+				deviceCard.innerHTML = '<div style="width:44px;height:44px;margin:0 auto 10px auto;border-radius:50%;background:#f3f4f6;color:#374151;display:flex;align-items:center;justify-content:center;">' +
+					'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 18h.01"/><path d="M10 18h.01"/><path d="M4 14V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8"/></svg>' +
+					'</div>' +
+					'<div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:4px;">Perangkat (Lokal)</div>' +
+					'<div style="font-size:11px;color:#6b7280;line-height:1.3;">Penyimpanan Komputer</div>';
+				deviceCard.onmouseover = function() { this.style.borderColor = '#9ca3af'; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 6px 12px rgba(0,0,0,0.08)'; };
+				deviceCard.onmouseout = function() { this.style.borderColor = '#e5e7eb'; this.style.transform = 'none'; this.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; };
+				deviceCard.onclick = function()
+				{
+					editorUi.hideDialog();
+					editorUi.setMode(window.App ? window.App.MODE_DEVICE : 'device', true);
+					if (fn) fn();
+				};
+				cards.appendChild(deviceCard);
+
+				div.appendChild(cards);
+
+				var later = document.createElement('div');
+				later.style.cssText = 'font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline;margin-top:6px;';
+				later.textContent = 'Tentukan nanti (buka kanvas kosong)';
+				later.onclick = function()
+				{
+					editorUi.hideDialog();
+					var prev = Editor.useLocalStorage;
+					editorUi.createFile(editorUi.defaultFilename, null, null, null, null, null, null, true);
+					Editor.useLocalStorage = prev;
+				};
+				div.appendChild(later);
+
+				this.container = div;
+			};
+		},
+
+		// Patch Menus to strictly allow only Cloud and Device
+		patchMenus: function(editorUi)
+		{
+			if (!editorUi) return;
+
+			var self = this;
+			var applyPatch = function(menus)
+			{
+				if (!menus || typeof Menu === 'undefined') return;
+
+				// 1. Override openFrom
+				menus.put('openFrom', new Menu(mxUtils.bind(self, function(menu, parent)
+				{
+					menu.addItem('Diagramin Cloud (Vercel)...', null, mxUtils.bind(self, function()
+					{
+						self.showFileManagerDialog();
+					}), parent);
+
+					menu.addItem(mxResources.get('device') + '...', null, function()
+					{
+						editorUi.pickFile(window.App ? window.App.MODE_DEVICE : 'device');
+					}, parent);
+				})));
+
+				// 2. Override importFrom
+				menus.put('importFrom', new Menu(mxUtils.bind(self, function(menu, parent)
+				{
+					menu.addItem('Diagramin Cloud (Vercel)...', null, mxUtils.bind(self, function()
+					{
+						self.showFileManagerDialog();
+					}), parent);
+
+					menu.addItem(mxResources.get('device') + '...', null, function()
+					{
+						editorUi.actions.get('import').funct();
+					}, parent);
+				})));
+			};
+
+			if (editorUi.menus)
+			{
+				applyPatch(editorUi.menus);
+			}
+
+			// Also patch future menus if regenerated
+			if (typeof EditorUi !== 'undefined' && EditorUi.prototype && !EditorUi.prototype._diagraminMenusPatched)
+			{
+				EditorUi.prototype._diagraminMenusPatched = true;
+				var origCreateMenus = EditorUi.prototype.createMenus;
+				EditorUi.prototype.createMenus = function()
+				{
+					var menus = origCreateMenus.apply(this, arguments);
+					applyPatch(menus);
+					return menus;
+				};
+			}
+
+			// Hook into save action (Ctrl+S / File > Save)
+			var saveAction = editorUi.actions.get('save');
+			if (saveAction && !saveAction._diagraminHooked)
+			{
+				saveAction._diagraminHooked = true;
+				var origSaveFunct = saveAction.funct;
+				saveAction.funct = mxUtils.bind(this, function()
+				{
+					if (window.DiagraminAuth && window.DiagraminAuth.currentUser != null)
+					{
+						this.handleSaveAction();
+					}
+					else
+					{
+						origSaveFunct.apply(this, arguments);
+					}
+				});
+			}
+
+			// Hook into saveAs action (Shift+Ctrl+S / File > Save As...)
+			var saveAsAction = editorUi.actions.get('saveAs');
+			if (saveAsAction && !saveAsAction._diagraminHooked)
+			{
+				saveAsAction._diagraminHooked = true;
+				var origSaveAsFunct = saveAsAction.funct;
+				saveAsAction.funct = mxUtils.bind(this, function()
+				{
+					this.showSaveChoiceDialog(origSaveAsFunct);
+				});
+			}
+		},
+
+		// Choice between Cloud and Local when saving as
+		showSaveChoiceDialog: function(fallbackLocalFn)
+		{
+			var overlay = this.createModalOverlay('diagSaveChoiceModal');
+			var modal = document.createElement('div');
+			modal.style.cssText = 'background:#ffffff;border-radius:12px;width:380px;padding:24px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#111827;text-align:center;';
+
+			modal.innerHTML = '<div style="font-size:18px;font-weight:700;margin-bottom:6px;">Simpan Diagram Sebagai</div>' +
+				'<p style="font-size:13px;color:#6b7280;margin:0 0 20px 0;">Pilih tujuan penyimpanan diagram Anda:</p>' +
+				'<div style="display:flex;gap:12px;margin-bottom:16px;">' +
+				'<div id="choiceSaveCloud" style="flex:1;padding:16px 12px;border:1.5px solid #2563eb;border-radius:10px;background:#eff6ff;cursor:pointer;transition:all 0.15s ease;">' +
+				'<div style="width:40px;height:40px;margin:0 auto 8px auto;border-radius:50%;background:#2563eb;color:#ffffff;display:flex;align-items:center;justify-content:center;">' +
+				'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>' +
+				'</div>' +
+				'<div style="font-size:14px;font-weight:700;color:#1d4ed8;">Cloud (Vercel)</div>' +
+				'<div style="font-size:11px;color:#3b82f6;margin-top:2px;">Blob &amp; Postgres</div>' +
+				'</div>' +
+				'<div id="choiceSaveLocal" style="flex:1;padding:16px 12px;border:1.5px solid #e5e7eb;border-radius:10px;background:#ffffff;cursor:pointer;transition:all 0.15s ease;">' +
+				'<div style="width:40px;height:40px;margin:0 auto 8px auto;border-radius:50%;background:#f3f4f6;color:#374151;display:flex;align-items:center;justify-content:center;">' +
+				'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 18h.01"/><path d="M10 18h.01"/><path d="M4 14V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8"/></svg>' +
+				'</div>' +
+				'<div style="font-size:14px;font-weight:700;color:#111827;">Perangkat (Lokal)</div>' +
+				'<div style="font-size:11px;color:#6b7280;margin-top:2px;">Download .drawio</div>' +
+				'</div>' +
+				'</div>' +
+				'<button id="cancelChoiceBtn" style="padding:6px 16px;border:1px solid #d1d5db;background:#ffffff;border-radius:6px;cursor:pointer;font-size:13px;color:#4b5563;">Batal</button>';
+
+			overlay.appendChild(modal);
+			document.body.appendChild(overlay);
+
+			var cloudChoice = document.getElementById('choiceSaveCloud');
+			cloudChoice.onmouseover = function() { this.style.transform = 'translateY(-2px)'; };
+			cloudChoice.onmouseout = function() { this.style.transform = 'none'; };
+			cloudChoice.onclick = mxUtils.bind(this, function()
+			{
+				this.closeModal();
+				this.showSaveDialog();
+			});
+
+			var localChoice = document.getElementById('choiceSaveLocal');
+			localChoice.onmouseover = function() { this.style.borderColor = '#9ca3af'; this.style.transform = 'translateY(-2px)'; };
+			localChoice.onmouseout = function() { this.style.borderColor = '#e5e7eb'; this.style.transform = 'none'; };
+			localChoice.onclick = mxUtils.bind(this, function()
+			{
+				this.closeModal();
+				if (fallbackLocalFn)
+				{
+					fallbackLocalFn();
+				}
+				else if (this.activeUi)
+				{
+					this.activeUi.saveFile(true);
+				}
+			});
+
+			document.getElementById('cancelChoiceBtn').onclick = mxUtils.bind(this, this.closeModal);
 		},
 
 		// Mount Cloud Buttons into header container
@@ -214,7 +578,8 @@
 			var editorUi = this.activeUi || window.editorUi;
 			if (!editorUi) return;
 
-			var xml = editorUi.getFileData(true);
+			var xml = (editorUi.getFileData ? editorUi.getFileData(true) : null) ||
+				(editorUi.editor && editorUi.editor.getGraphXml ? mxUtils.getXml(editorUi.editor.getGraphXml()) : null);
 			if (!xml || xml.trim().length === 0)
 			{
 				this.showToast('Gagal menyimpan: Konten diagram kosong.', 'error');
@@ -902,6 +1267,31 @@
 	style.textContent = '@keyframes diagraminFadeIn { from { opacity:0; transform:scale(0.97); } to { opacity:1; transform:scale(1); } }';
 	document.head.appendChild(style);
 
+	// Immediate setup of dialogs and client nullification
+	DiagraminCloud.nullifyExternalClients();
+	DiagraminCloud.installCustomStorageDialog();
+
+	// Hook EditorUi.prototype.init
+	if (typeof EditorUi !== 'undefined' && EditorUi.prototype && !EditorUi.prototype._diagraminHooked)
+	{
+		EditorUi.prototype._diagraminHooked = true;
+		var origEditorUiInit = EditorUi.prototype.init;
+		EditorUi.prototype.init = function()
+		{
+			window.editorUi = this;
+			var res = origEditorUiInit.apply(this, arguments);
+			try
+			{
+				DiagraminCloud.init(this);
+			}
+			catch(e)
+			{
+				console.error('DiagraminCloud init error:', e);
+			}
+			return res;
+		};
+	}
+
 	// Auto-initialize when editorUi is available
 	var checkUiInterval = setInterval(function()
 	{
@@ -919,8 +1309,8 @@
 		setTimeout(function()
 		{
 			var ui = window.editorUi || (window.App && window.App.prototype && window.App.prototype.activeUi);
-			DiagraminCloud.init(ui);
-		}, 800);
+			if (ui) DiagraminCloud.init(ui);
+		}, 600);
 	});
 
 })();
