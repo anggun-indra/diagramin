@@ -134,6 +134,14 @@
 		init: function(editorUi)
 		{
 			this.activeUi = editorUi;
+
+			// Enforce refined chevron icons for steppers
+			if (typeof Editor !== 'undefined')
+			{
+				Editor.arrowDownImage = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNHB4IiBoZWlnaHQ9IjI0cHgiIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMi4yIiBkPSJNNiA5TDEyIDE1TDE4IDkiLz48L3N2Zz4=';
+				Editor.arrowUpImage = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNHB4IiBoZWlnaHQ9IjI0cHgiIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMi4yIiBkPSJNNiAxNUwxMiA5TDE4IDE1Ii8+PC9zdmc+';
+			}
+
 			this.nullifyExternalClients();
 			this.installCustomStorageDialog();
 			this.patchMenus(editorUi);

@@ -1347,23 +1347,70 @@ html body div.geBtn.geSmallBanner {
 	white-space: normal;
 }
 
+/* Unified and polished numeric input stepper */
+.geFormatContainer input:has(+ .geBtnStepper),
+.geFormatEntry input:has(+ .geBtnStepper) {
+	height: 24px !important;
+	line-height: 22px !important;
+	padding: 0 4px !important;
+	border: 1px solid var(--field-border-color, #d2d2d7) !important;
+	border-right: none !important;
+	border-radius: 4px 0 0 4px !important;
+	box-sizing: border-box !important;
+	font-size: 12px !important;
+	text-align: center !important;
+	outline: none !important;
+	background-color: light-dark(#ffffff, #1c1c1e) !important;
+	color: light-dark(#1d1d1f, #e5e5e7) !important;
+}
+
 .geBtnStepper {
-	display: inline-block;
-	border-radius: 3px;
-	border-style: solid;
-	border-width: 1px;
+	box-sizing: border-box !important;
+	height: 24px !important;
+	width: 15px !important;
+	border-radius: 0 4px 4px 0 !important;
+	border-style: solid !important;
+	border-width: 1px !important;
+	border-color: var(--field-border-color, #d2d2d7) !important;
+	background-color: light-dark(#f5f5f7, #2c2c2e) !important;
+	display: flex !important;
+	flex-direction: column !important;
+	overflow: hidden !important;
+	padding: 0 !important;
+}
+
+.geDarkMode .geBtnStepper {
+	border-color: #48484a !important;
+	background-color: #2c2c2e !important;
 }
 
 .geBtnStepper>div {
-	background-position: center center;
-	background-repeat: no-repeat;
-	background-size: 18px;
-	position: relative;
-	padding: 1px 0 0 0;
+	flex: 1 1 50% !important;
+	height: 11px !important;
+	width: 100% !important;
+	background-position: center center !important;
+	background-repeat: no-repeat !important;
+	background-size: 14px 14px !important;
+	cursor: pointer !important;
+	position: relative !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	opacity: 0.7 !important;
+	transition: background-color 0.1s ease, opacity 0.1s ease !important;
+}
+
+.geBtnStepper>div:first-child {
+	border-bottom: 1px solid light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.1)) !important;
+}
+
+.geBtnStepper>div:hover {
+	background-color: light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.15)) !important;
+	opacity: 1 !important;
 }
 
 .geBtnStepper>div:active {
-	background-color: #4d90fe;
+	background-color: #0071e3 !important;
+	opacity: 1 !important;
 }
 
 .geColorBtn {
