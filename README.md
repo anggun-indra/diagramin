@@ -1,51 +1,132 @@
-# draw.io
+# Diagramin
 
-## About
+[![Live Production](https://img.shields.io/badge/Demo-diagramin.vercel.app-blue?style=flat&logo=vercel)](https://diagramin.vercel.app)
+[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
+[![Upstream](https://img.shields.io/badge/Upstream-jgraph%2Fdrawio-orange)](https://github.com/jgraph/drawio)
 
-draw.io is a configurable diagramming and whiteboarding application, jointly owned and developed by draw.io Ltd (previously named JGraph) and draw.io AG. We also run a production deployment at https://app.diagrams.net.
+**Diagramin** adalah aplikasi diagramming dan flowchart berbasis web yang dirancang khusus untuk kebutuhan spesifik—terutama di lingkungan **akademik, perkuliahan, dan institusi pendidikan**.
 
-## License
+Project ini merupakan **fork independen** dari open-source [draw.io (jgraph/drawio)](https://github.com/jgraph/drawio) dengan modifikasi utama pada arsitektur penyimpanan: mengganti dependensi cloud pihak ketiga (Google Drive, OneDrive, Dropbox) dengan **penyimpanan cloud mandiri berbasis Vercel Blob Storage dan database metadata Neon PostgreSQL**, serta mempertahankan opsi penyimpanan **Local Device**.
 
-The source code in this repository is licensed under the [Apache License 2.0](LICENSE).
+---
 
-The icon sets, stencil libraries, and diagram templates are provided under the following terms:
+## ⚖️ Etika Forking & Atribusi Open-Source (Open Source Attribution)
 
-> The icon sets and stencil libraries included in this software, and any derivatives thereof (including conversions to other formats, traced reproductions, substantially similar visual representations, or AI-generated images created using these icons as reference or training input), may not be used as software assets in, distributed for use with, or incorporated into Atlassian products or products distributed through the Atlassian marketplace or plugin ecosystem, without explicit written permission.
->
-> This restriction does not apply to end-user diagram output (such as exported images or documents) created using this software.
+Proyek ini menghormati dan mematuhi etika open-source serta ketentuan lisensi upstream:
 
-Some icons are originally defined by third-party copyright holders; we have verified that all original licenses permit use in this project. Additional third-party JavaScript libraries are included, all with licenses compatible with Apache 2.0 (no GPL or AGPL).
+1. **Upstream Project & Origin**:
+   Aplikasi ini merupakan karya turunan (*derivative work*) yang di-fork dari proyek sumber terbuka [draw.io](https://github.com/jgraph/drawio), yang dikembangkan dan dimiliki secara bersama oleh **draw.io Ltd** (sebelumnya JGraph Ltd) dan **draw.io AG**.
+2. **Lisensi Apache 2.0**:
+   Seluruh kode sumber Diagramin tetap tunduk dan dilisensikan di bawah [Apache License 2.0](LICENSE), mempertahankan ketentuan lisensi asli.
+3. **Pemberitahuan Merek Dagang (Trademark Disclaimer)**:
+   Nama "draw.io" dan "diagrams.net" adalah merek dagang terdaftar milik draw.io Ltd / draw.io AG. Proyek ini menggunakan nama **Diagramin** untuk membedakan secara tegas dari produk resmi draw.io. Diagramin adalah proyek independen dan **tidak terafiliasi dengan, didukung oleh, atau disponsori oleh draw.io Ltd maupun draw.io AG**.
+4. **Ketentuan Aset Ikon & Stencil**:
+   Ikon, stencil, dan pustaka bentuk bawaan disediakan sesuai dengan ketentuan lisensi asli upstream draw.io. Aset-aset tersebut tidak boleh digunakan sebagai aset perangkat lunak dalam produk ekosistem Atlassian tanpa izin tertulis dari pemilik hak cipta aslinya.
 
-We make no copyright claim on diagrams you create with this software.
+---
 
-## Contributions
+## 🎯 Mengapa Fork Ini Dibuat? (Latar Belakang & Tujuan)
 
-We do not accept pull requests. The project is developed entirely by the core team.
+Meskipun draw.io asli sangat handal, integrasi default-nya mengandalkan akun Google Drive, OneDrive, atau Dropbox individu. Dalam konteks perkuliahan dan pengajaran kampus, arsitektur tersebut sering menimbulkan kendala:
 
-## Scope
+- **Kebijakan Google Workspace Kampus**: Akun email kampus sering kali membatasi otorisasi OAuth aplikasi pihak ketiga ke Google Drive mahasiswa/dosen, memicu error izin (*permission denied* atau *unverified app warning*).
+- **Kerapian & Fokus Akademik**: Mahasiswa dan dosen memerlukan wadah penyimpanan diagram yang rapi dan terorganisir per mata kuliah/tugas tanpa tercampur dengan tumpukan dokumen pribadi di Google Drive.
+- **Dua Pilihan Penyimpanan yang Jelas**:
+  1. **Diagramin Cloud**: Tersimpan otomatis dan aman di cloud mandiri (*Vercel Blob Storage* untuk isi diagram dan *Neon Serverless PostgreSQL* untuk metadata & folder).
+  2. **Local Device**: File diagram `.drawio` disimpan langsung ke komputer pengguna secara instan tanpa membutuhkan koneksi internet atau login akun.
+- **Bebas Bloatware Pihak Ketiga**: Menu dan dialog integrasi cloud eksternal (Google Drive, Dropbox, OneDrive, WebDAV, GitLab, dsb.) telah dihilangkan agar antarmuka menjadi bersih, cepat, dan fokus untuk kegiatan belajar-mengajar.
 
-draw.io is a diagramming and whiteboarding application. It is not an SVG editor. SVG export is intended for embedding in web pages, not for editing in other tools.
+---
 
-Note that draw.io does not support real-time collaborative editing in this version, currently.
+## ✨ Fitur Utama Diagramin
 
-For issues or questions about the editor in any draw.io product, the issue tracker and discussions here are a good starting point.
+- **🎨 Editor Lengkap**: Fitur pembuatan diagram lengkap bawaan draw.io (Flowchart, UML, ERD, Arsitektur Cloud, Network Diagram, Mind Map, Wireframe UI).
+- **☁️ Dedicated Blob Storage (Vercel Blob)**: Menyimpan file diagram XML dengan performa tinggi, latency rendah, dan skalabilitas serverless.
+- **🗂️ Manajemen Folder & Meta Data (Neon PostgreSQL)**: Pengguna dapat membuat folder (misalnya per mata kuliah atau topik riset) dan mengelompokkan diagram dengan mudah.
+- **🔐 Autentikasi Google Terintegrasi**: Login praktis menggunakan akun Google (hanya untuk autentikasi identitas, tidak memerlukan akses ke Google Drive pribadi).
+- **💾 Penyimpanan Local**: Opsi unduh dan buka langsung dari storage lokal (*Local Device*).
+- **🌓 Tampilan Modern & Rapi**:
+  - Peningkatan pada kontrol input angka (*steppers*) yang menyatu (*seamless*).
+  - Indikator status penyimpanan cloud berwarna hijau (`✓ Tersimpan di Vercel Cloud`).
+  - Dukungan tema Light Mode dan Dark Mode yang konsisten.
 
-## Running
+---
 
-Options for running draw.io:
+## 🏗️ Arsitektur Sistem
 
-- Fork this repository and [publish to GitHub Pages](https://help.github.com/categories/github-pages-basics/) for a [fully functional editor](https://jgraph.github.io/drawio/src/main/webapp/index.html) (without integrations)
-- Use the [official Docker image](https://github.com/jgraph/docker-drawio)
-- Download [draw.io Desktop](https://get.diagrams.net)
+```
+┌────────────────────────────────────────────────────────┐
+│                   Diagramin Frontend                   │
+│         (HTML5, Canvas, mxGraph, Modern UI)            │
+└───────────────────────────┬────────────────────────────┘
+                            │
+               ┌────────────┴────────────┐
+               ▼                         ▼
+   ┌───────────────────────┐  ┌─────────────────────────┐
+   │    Local Storage      │  │     Diagramin Cloud     │
+   │  (Device File System) │  │   (Google/Firebase Auth)│
+   └───────────────────────┘  └─────────────┬───────────┘
+                                            │
+                               ┌────────────┴────────────┐
+                               ▼                         ▼
+                    ┌─────────────────────┐   ┌─────────────────────┐
+                    │     Vercel Blob     │   │   Neon PostgreSQL   │
+                    │   (Konten XML)      │   │ (Metadata & Folder) │
+                    └─────────────────────┘   └─────────────────────┘
+```
 
-Packaged .war files are available on the [releases page](https://github.com/jgraph/draw.io/releases).
+---
 
-## Supported Browsers
+## 🚀 Panduan Menjalankan Secara Lokal (Local Development)
 
-Chrome 123+, Firefox 120+, Safari 17.5+, Opera 109+, Edge 123+, WebView Android 137+, Safari iOS 18.5+.
+### Prasyarat
+- [Node.js](https://nodejs.org/) (versi 18 ke atas)
+- Akun [Vercel](https://vercel.com) (untuk Vercel Blob token)
+- Akun [Neon](https://neon.tech) (untuk PostgreSQL database)
 
-## Trademark
+### Langkah Menjalankan:
+1. **Clone repository ini:**
+   ```bash
+   git clone https://github.com/anggun-indra/diagramin.git
+   cd diagramin
+   ```
 
-draw.io is a registered EU trademark (#018062448).
+2. **Install dependensi:**
+   ```bash
+   npm install
+   ```
 
-Do not use the draw.io name or logo in ways that suggest affiliation with, endorsement by, or sponsorship by draw.io. Do not use draw.io logos for your own business, product, project, domain, or social media presence. Do not modify the draw.io logos. Use of draw.io trademarks requires prior written permission.
+3. **Konfigurasi Environment Variables:**
+   Buat file `.env.local` di direktori root:
+   ```env
+   DATABASE_URL="postgres://user:password@ep-sample.region.neon.tech/neondb?sslmode=require"
+   BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."
+   ```
+
+4. **Jalankan development server menggunakan Vercel CLI:**
+   ```bash
+   npx vercel dev
+   ```
+   Buka peramban Anda di `http://localhost:3000`.
+
+---
+
+## 🚢 Deployment ke Vercel
+
+Diagramin siap di-deploy langsung ke Vercel:
+
+1. Import repository `anggun-indra/diagramin` ke dashboard Vercel.
+2. Tambahkan **Environment Variables** di Vercel:
+   - `DATABASE_URL` : Connection string database Neon Postgres.
+   - `BLOB_READ_WRITE_TOKEN` : Token akses baca/tulis Vercel Blob.
+3. Deploy! Aplikasi akan otomatis ter-build dan terbit ke domain produksi Anda.
+
+Live production app: **[https://diagramin.vercel.app](https://diagramin.vercel.app)**
+
+---
+
+## 📜 Lisensi & Hak Cipta
+
+- **Kode Sumber Diagramin**: Dilisensikan di bawah [Apache License 2.0](LICENSE).
+- **Hak Cipta Upstream**: Hak cipta asli draw.io dimiliki oleh draw.io Ltd (JGraph Ltd) dan draw.io AG.
+- **Modifikasi Diagramin**: Hak cipta modifikasi © 2026 Anggun Indra dan kontributor Diagramin.
